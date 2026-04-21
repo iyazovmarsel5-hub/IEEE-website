@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FutureTech Junior — LEGO AI Robot</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --g: #00ff88;
+  --g2: #00e5b0;
+  --dark: #030a06;
+  --d2: #071210;
+  --d3: #0b1c14;
+  --y: #f5c842;
+  --text: #cef0dd;
+  --muted: #4a7a62;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+  cursor: none;
+}
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.025; pointer-events:none; z-index:9990;
+}
+#cursor {
+  position:fixed; width:12px; height:12px;
+  background:var(--g); border-radius:50%;
+  pointer-events:none; z-index:9999;
+  mix-blend-mode:screen; transform:translate(-50%,-50%);
+  transition:width .2s, height .2s;
+  box-shadow:0 0 16px var(--g),0 0 32px var(--g);
+}
+#cursor-ring {
+  position:fixed; width:36px; height:36px;
+  border:1.5px solid rgba(0,255,136,.35); border-radius:50%;
+  pointer-events:none; z-index:9998;
+  transform:translate(-50%,-50%);
+  transition:width .3s, height .3s;
+}
+
+/* NAV */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:500;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:22px 64px; transition:background .4s, padding .4s;
+}
+nav.scrolled {
+  background:rgba(3,10,6,.92); backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(0,255,136,.08); padding:14px 64px;
+}
+.nav-logo {
+  font-family:'Syne',sans-serif; font-size:.95rem; font-weight:800;
+  letter-spacing:.06em; color:var(--g);
+}
+.nav-logo em { color:var(--text); font-style:normal; }
+.nav-links { display:flex; gap:36px; }
+.nav-links a {
+  font-size:.71rem; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--muted); text-decoration:none; transition:color .25s;
+}
+.nav-links a:hover { color:var(--g); }
+.nav-pill {
+  font-size:.68rem; font-weight:500; letter-spacing:.12em;
+  text-transform:uppercase; color:#000; background:var(--g);
+  padding:7px 18px; border-radius:100px;
+}
+
+/* HERO */
+#hero {
+  min-height:100vh; display:grid;
+  grid-template-columns:1fr 1fr; align-items:center;
+  padding:100px 64px 60px; gap:40px; position:relative;
+}
+#hero::before {
+  content:''; position:absolute; top:0; right:36%;
+  width:1px; height:100%;
+  background:linear-gradient(to bottom,transparent,rgba(0,255,136,.1) 30%,rgba(0,255,136,.1) 70%,transparent);
+}
+.hero-left { position:relative; z-index:2; }
+.eyebrow {
+  display:inline-flex; align-items:center; gap:10px;
+  font-size:.67rem; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--g); margin-bottom:32px;
+}
+.eyebrow-dot {
+  width:6px; height:6px; background:var(--g); border-radius:50%;
+  box-shadow:0 0 10px var(--g);
+  animation: blink 1.8s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+h1 {
+  font-family:'Syne',sans-serif; font-size:clamp(3rem,5.5vw,5rem);
+  font-weight:800; line-height:.98; letter-spacing:-.02em; margin-bottom:12px;
+}
+h1 .accent { color:var(--g); display:block; text-shadow:0 0 60px rgba(0,255,136,.35); }
+h1 .sub {
+  display:block; color:rgba(206,240,221,.2);
+  font-size:.36em; font-weight:400; letter-spacing:.06em;
+  font-family:'DM Mono',monospace; margin-top:14px;
+}
+.hero-desc {
+  margin:32px 0 44px; font-size:.88rem; line-height:1.9;
+  color:rgba(206,240,221,.48); max-width:420px; font-weight:300;
+}
+.hero-actions { display:flex; gap:16px; align-items:center; }
+.btn-main {
+  position:relative; font-family:'Syne',sans-serif;
+  font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:#000; background:var(--g); padding:15px 36px;
+  border:none; border-radius:6px; text-decoration:none; cursor:none;
+  transition:box-shadow .3s;
+}
+.btn-main:hover { box-shadow:0 0 40px rgba(0,255,136,.5),0 4px 20px rgba(0,255,136,.3); }
+.btn-ghost {
+  font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); text-decoration:none; cursor:none;
+  transition:color .25s; display:flex; align-items:center; gap:8px;
+}
+.btn-ghost::before { content:'→'; font-size:1rem; }
+.btn-ghost:hover { color:var(--g); }
+
+/* 3D Canvas */
+.hero-right {
+  position:relative; display:flex;
+  align-items:center; justify-content:center; height:600px;
+}
+#robot-canvas { width:100% !important; height:100% !important; }
+.canvas-glow {
+  position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+  width:220px; height:28px;
+  background:radial-gradient(ellipse,rgba(0,255,136,.3) 0%,transparent 70%);
+  border-radius:50%; pointer-events:none;
+  animation:gp 3s ease-in-out infinite;
+}
+@keyframes gp {
+  0%,100%{opacity:.6;transform:translateX(-50%) scaleX(1);}
+  50%{opacity:1;transform:translateX(-50%) scaleX(1.2);}
+}
+
+/* TICKER */
+.ticker-wrap {
+  border-top:1px solid rgba(0,255,136,.07);
+  border-bottom:1px solid rgba(0,255,136,.07);
+  background:rgba(0,255,136,.02);
+  overflow:hidden; padding:13px 0;
+}
+.ticker-track {
+  display:flex; animation:tick 24s linear infinite; white-space:nowrap;
+}
+@keyframes tick { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.ticker-item {
+  font-size:.67rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--muted); padding:0 44px;
+  display:inline-flex; align-items:center; gap:44px;
+}
+.td { display:inline-block; width:5px; height:5px; background:var(--g); border-radius:50%; box-shadow:0 0 8px var(--g); }
+
+/* SECTIONS */
+section { position:relative; z-index:1; padding:120px 64px; }
+.s-label {
+  font-size:.64rem; letter-spacing:.25em; text-transform:uppercase;
+  color:var(--g); margin-bottom:16px;
+  display:flex; align-items:center; gap:12px;
+}
+.s-label::after {
+  content:''; width:48px; height:1px;
+  background:linear-gradient(to right,var(--g),transparent);
+}
+h2 {
+  font-family:'Syne',sans-serif; font-size:clamp(2rem,3.5vw,3rem);
+  font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:16px;
+}
+h2 em { color:var(--g); font-style:normal; }
+.s-sub {
+  font-size:.87rem; line-height:1.85; color:rgba(206,240,221,.42);
+  max-width:500px; margin-bottom:70px; font-weight:300;
+}
+
+/* ABOUT */
+#about { background:var(--d2); }
+.about-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+.about-cell {
+  background:rgba(0,255,136,.03); border:1px solid rgba(0,255,136,.07);
+  padding:48px 40px; position:relative; overflow:hidden;
+  transition:background .3s, border-color .3s;
+}
+.about-cell:hover { background:rgba(0,255,136,.055); border-color:rgba(0,255,136,.2); }
+.about-cell::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(to right,transparent,rgba(0,255,136,.55),transparent);
+  transform:scaleX(0); transition:transform .4s;
+}
+.about-cell:hover::after { transform:scaleX(1); }
+.cell-num {
+  font-family:'Syne',sans-serif; font-size:4rem; font-weight:800;
+  color:rgba(0,255,136,.07); line-height:1; margin-bottom:20px;
+  transition:color .3s;
+}
+.about-cell:hover .cell-num { color:rgba(0,255,136,.18); }
+.cell-title {
+  font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700;
+  color:var(--text); margin-bottom:14px;
+}
+.cell-body { font-size:.82rem; line-height:1.85; color:rgba(206,240,221,.44); }
+
+/* COMPONENTS */
+#components { background:var(--d3); }
+.comp-list {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:1px; background:rgba(0,255,136,.05);
+  border:1px solid rgba(0,255,136,.05);
+}
+.comp-item {
+  background:var(--d3); padding:34px 26px;
+  transition:background .25s; position:relative;
+}
+.comp-item:hover { background:rgba(0,255,136,.05); }
+.comp-no { font-size:.58rem; letter-spacing:.2em; color:var(--muted); margin-bottom:18px; }
+.comp-icon-wrap {
+  width:46px; height:46px; background:rgba(0,255,136,.05);
+  border:1px solid rgba(0,255,136,.12); border-radius:11px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; margin-bottom:18px;
+  transition:background .25s, border-color .25s;
+}
+.comp-item:hover .comp-icon-wrap { background:rgba(0,255,136,.12); border-color:rgba(0,255,136,.35); }
+.comp-name {
+  font-family:'Syne',sans-serif; font-size:.88rem; font-weight:700;
+  color:var(--text); margin-bottom:8px;
+}
+.comp-role { font-size:.75rem; color:var(--muted); line-height:1.6; }
+
+/* HOW */
+#how { background:var(--d2); }
+.how-wrap { display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:start; }
+.how-steps { display:flex; flex-direction:column; }
+.how-step {
+  display:flex; gap:28px; align-items:flex-start;
+  padding:32px 0; border-bottom:1px solid rgba(0,255,136,.07);
+  opacity:0; transform:translateY(20px); transition:opacity .5s,transform .5s;
+}
+.how-step.vis { opacity:1; transform:translateY(0); }
+.step-marker {
+  width:40px; height:40px; border:1.5px solid rgba(0,255,136,.2);
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:'Syne',sans-serif; font-size:.72rem; font-weight:700;
+  color:var(--muted); flex-shrink:0; transition:border-color .3s,color .3s,background .3s;
+}
+.how-step:hover .step-marker { border-color:var(--g); color:var(--g); background:rgba(0,255,136,.06); }
+.step-txt h3 {
+  font-family:'Syne',sans-serif; font-size:.92rem; font-weight:700;
+  color:var(--text); margin-bottom:8px;
+}
+.step-txt p { font-size:.79rem; color:var(--muted); line-height:1.8; }
+
+/* AI DIAGRAM */
+.ai-diagram {
+  position:sticky; top:120px;
+  background:rgba(0,255,136,.03); border:1px solid rgba(0,255,136,.1);
+  border-radius:14px; padding:36px; overflow:hidden;
+}
+.ai-diagram svg { width:100%; }
+
+/* IMPACT */
+#impact { background:var(--d3); }
+.impact-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+.impact-card {
+  border:1px solid rgba(0,255,136,.08); border-radius:12px;
+  padding:40px 30px; background:rgba(0,0,0,.3);
+  transition:transform .3s,border-color .3s; position:relative; overflow:hidden;
+}
+.impact-card::before {
+  content:attr(data-emoji); position:absolute; right:-8px; top:-8px;
+  font-size:5rem; opacity:.06; line-height:1; pointer-events:none;
+  transition:opacity .3s;
+}
+.impact-card:hover { transform:translateY(-6px); border-color:rgba(0,255,136,.25); }
+.impact-card:hover::before { opacity:.1; }
+.impact-icon { font-size:1.9rem; margin-bottom:18px; display:block; }
+.impact-title {
+  font-family:'Syne',sans-serif; font-size:.97rem; font-weight:700;
+  color:var(--text); margin-bottom:12px;
+}
+.impact-body { font-size:.79rem; color:var(--muted); line-height:1.75; }
+
+/* TEAM */
+#team { background:var(--d2); }
+.team-row {
+  display:flex; flex-wrap:wrap;
+  border:1px solid rgba(0,255,136,.08);
+}
+.member {
+  flex:1; min-width:170px; padding:40px 26px;
+  border-right:1px solid rgba(0,255,136,.08);
+  transition:background .3s;
+}
+.member:last-child { border-right:none; }
+.member:hover { background:rgba(0,255,136,.04); }
+.member-avatar {
+  width:50px; height:50px; border-radius:13px;
+  background:linear-gradient(135deg,rgba(0,255,136,.12),rgba(0,255,136,.03));
+  border:1px solid rgba(0,255,136,.2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Syne',sans-serif; font-size:1.15rem; font-weight:800;
+  color:var(--g); margin-bottom:18px;
+}
+.member-id { font-size:.63rem; letter-spacing:.15em; color:var(--g); margin-bottom:6px; }
+.member-role { font-size:.74rem; color:var(--muted); line-height:1.5; }
+
+/* CONCLUSION */
+#conclusion {
+  background:var(--dark); text-align:center; padding:140px 64px;
+}
+.concl-inner { max-width:720px; margin:0 auto; }
+.big-text {
+  font-family:'Syne',sans-serif;
+  font-size:clamp(2.2rem,4.5vw,4rem);
+  font-weight:800; line-height:1.1; letter-spacing:-.02em; margin-bottom:28px;
+}
+.big-text span { color:var(--g); text-shadow:0 0 80px rgba(0,255,136,.3); }
+.concl-desc {
+  font-size:.88rem; line-height:1.9;
+  color:rgba(206,240,221,.38); margin-bottom:52px;
+}
+
+/* FOOTER */
+footer {
+  border-top:1px solid rgba(0,255,136,.07); padding:30px 64px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:rgba(0,0,0,.4); position:relative; z-index:1;
+}
+.f-logo { font-family:'Syne',sans-serif; font-size:.9rem; font-weight:800; color:var(--g); }
+.f-mid { font-size:.66rem; letter-spacing:.14em; color:var(--muted); text-transform:uppercase; }
+.f-right { font-size:.66rem; color:rgba(0,255,136,.3); }
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  nav { padding:16px 24px; } nav.scrolled { padding:12px 24px; }
+  .nav-links { display:none; }
+  #hero { grid-template-columns:1fr; padding:90px 24px 40px; }
+  .hero-right { height:380px; }
+  section { padding:72px 24px; }
+  .about-grid,.how-wrap { grid-template-columns:1fr; }
+  .comp-list { grid-template-columns:repeat(2,1fr); }
+  .impact-grid { grid-template-columns:1fr; }
+  .team-row { flex-direction:column; }
+  .member { border-right:none; border-bottom:1px solid rgba(0,255,136,.08); }
+  .ai-diagram { display:none; }
+  footer { flex-direction:column; gap:12px; padding:24px; text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">Future<em>Tech</em> Junior</div>
+  <div class="nav-links">
+    <a href="#about">Problem</a>
+    <a href="#components">Tech</a>
+    <a href="#how">How It Works</a>
+    <a href="#impact">Impact</a>
+    <a href="#team">Team</a>
+  </div>
+  <div class="nav-pill">IEEE 2025</div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-left">
+    <div class="eyebrow"><span class="eyebrow-dot"></span>LEGO-based AI Educational Robot</div>
+    <h1>
+      Future<span class="accent">Tech<br>Junior</span>
+      <span class="sub">// Arduino · Sensors · LEGO · AI</span>
+    </h1>
+    <p class="hero-desc">
+      A hands-on AI robot that makes robotics accessible to every child in Kazakhstan —
+      from megacities to the smallest villages. Watch it think. Watch it move.
+    </p>
+    <div class="hero-actions">
+      <a href="#about" class="btn-main">Explore Project</a>
+      <a href="#how" class="btn-ghost">How It Works</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="canvas-glow"></div>
+    <canvas id="robot-canvas"></canvas>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track">
+    <span class="ticker-item">Arduino Uno <span class="td"></span></span>
+    <span class="ticker-item">Ultrasonic Sensor <span class="td"></span></span>
+    <span class="ticker-item">IR Line Following <span class="td"></span></span>
+    <span class="ticker-item">Servomotors <span class="td"></span></span>
+    <span class="ticker-item">LCD Display <span class="td"></span></span>
+    <span class="ticker-item">LED Signals <span class="td"></span></span>
+    <span class="ticker-item">Buzzer Sound <span class="td"></span></span>
+    <span class="ticker-item">LEGO Frame <span class="td"></span></span>
+    <span class="ticker-item">AI Decision Making <span class="td"></span></span>
+    <span class="ticker-item">Arduino Uno <span class="td"></span></span>
+    <span class="ticker-item">Ultrasonic Sensor <span class="td"></span></span>
+    <span class="ticker-item">IR Line Following <span class="td"></span></span>
+    <span class="ticker-item">Servomotors <span class="td"></span></span>
+    <span class="ticker-item">LCD Display <span class="td"></span></span>
+    <span class="ticker-item">LED Signals <span class="td"></span></span>
+    <span class="ticker-item">Buzzer Sound <span class="td"></span></span>
+    <span class="ticker-item">LEGO Frame <span class="td"></span></span>
+    <span class="ticker-item">AI Decision Making <span class="td"></span></span>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="s-label">Challenge & Response</div>
+  <h2>The Problem<br>We're <em>Solving</em></h2>
+  <p class="s-sub">Robotics education in Kazakhstan is locked inside big-city centers. Millions of children in rural areas have never seen a robot — let alone built one.</p>
+  <div class="about-grid">
+    <div class="about-cell">
+      <div class="cell-num">01</div>
+      <div class="cell-title">The Gap in Access</div>
+      <div class="cell-body">In major cities like Almaty and Astana, STEM clubs and robotics centers flourish. But in small towns and villages, children have zero exposure to engineering, sensors, or programming — putting their future at a disadvantage before it even starts.</div>
+    </div>
+    <div class="about-cell">
+      <div class="cell-num">02</div>
+      <div class="cell-title">Our Solution</div>
+      <div class="cell-body">FutureTech Junior is an affordable, portable, LEGO-built AI robot powered by Arduino. It physically demonstrates sensor logic, obstacle avoidance, and line-following — core AI concepts — to children who can see it, touch it and interact with it.</div>
+    </div>
+    <div class="about-cell">
+      <div class="cell-num">03</div>
+      <div class="cell-title">Why LEGO + Arduino</div>
+      <div class="cell-body">LEGO makes the robot approachable and safe. Arduino gives it real intelligence. Together they form a system that any school can replicate, any teacher can explain, and any student can eventually build themselves from scratch.</div>
+    </div>
+    <div class="about-cell">
+      <div class="cell-num">04</div>
+      <div class="cell-title">The Bigger Picture</div>
+      <div class="cell-body">Children introduced to technology early are significantly more likely to pursue technical careers. By starting small — one robot, one classroom — we can help build the next generation of Kazakhstani engineers, one interaction at a time.</div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section id="components">
+  <div class="s-label">Hardware Stack</div>
+  <h2>What's Inside<br>the <em>Robot</em></h2>
+  <p class="s-sub">Every component demonstrates a real-world AI and robotics concept — visible, touchable, understandable by any child.</p>
+  <div class="comp-list">
+    <div class="comp-item"><div class="comp-no">001</div><div class="comp-icon-wrap">🧠</div><div class="comp-name">Arduino Uno</div><div class="comp-role">Central brain — reads all sensors, makes decisions, controls outputs</div></div>
+    <div class="comp-item"><div class="comp-no">002</div><div class="comp-icon-wrap">📡</div><div class="comp-name">Ultrasonic Sensor</div><div class="comp-role">Measures distance and detects obstacles — triggers automatic direction change</div></div>
+    <div class="comp-item"><div class="comp-no">003</div><div class="comp-icon-wrap">👁️</div><div class="comp-name">IR Sensor</div><div class="comp-role">Reads floor contrast — enables precise line-following trajectories</div></div>
+    <div class="comp-item"><div class="comp-no">004</div><div class="comp-icon-wrap">⚙️</div><div class="comp-name">Servomotors</div><div class="comp-role">Powers movement — turns, advances, and adjusts direction in real time</div></div>
+    <div class="comp-item"><div class="comp-no">005</div><div class="comp-icon-wrap">💡</div><div class="comp-name">LEDs</div><div class="comp-role">Visual feedback — lights on detection events and child interactions</div></div>
+    <div class="comp-item"><div class="comp-no">006</div><div class="comp-icon-wrap">🔊</div><div class="comp-name">Buzzer</div><div class="comp-role">Audio signals — tones on approach, interactions and obstacle events</div></div>
+    <div class="comp-item"><div class="comp-no">007</div><div class="comp-icon-wrap">🖥️</div><div class="comp-name">LCD Display</div><div class="comp-role">Shows welcome messages and live sensor readouts in real time</div></div>
+    <div class="comp-item"><div class="comp-no">008</div><div class="comp-icon-wrap">🧱</div><div class="comp-name">LEGO Frame</div><div class="comp-role">Modular, child-safe structure — designed to be disassembled and rebuilt</div></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="s-label">Operating Principle</div>
+  <h2>How the Robot<br><em>Thinks</em> & Acts</h2>
+  <p class="s-sub">Four behaviors, each demonstrating a foundational AI concept. No remote control — fully autonomous.</p>
+  <div class="how-wrap">
+    <div class="how-steps">
+      <div class="how-step"><div class="step-marker">01</div><div class="step-txt"><h3>Obstacle Detection & Avoidance</h3><p>The ultrasonic sensor pings the environment 20× per second. When an object is within the threshold, the Arduino instantly decides to reverse and turn — a live demonstration of sensor-based AI decision-making every child can witness.</p></div></div>
+      <div class="how-step"><div class="step-marker">02</div><div class="step-txt"><h3>Line Following</h3><p>IR sensors read the contrast between the floor and a painted line. The robot continuously adjusts its servo motors to stay on track — the same principle used in industrial logistics robots and self-driving vehicles.</p></div></div>
+      <div class="how-step"><div class="step-marker">03</div><div class="step-txt"><h3>Child Interaction Mode</h3><p>When a child approaches within range, the robot greets them: the LCD shows a welcome message, the buzzer plays a friendly tone, LEDs light up. Multi-modal response — memorable first encounter with robotics.</p></div></div>
+      <div class="how-step"><div class="step-marker">04</div><div class="step-txt"><h3>Fully Autonomous Operation</h3><p>No operator needed. All behaviors emerge from sensor data and programmed logic — letting children witness genuine machine intelligence at work, not a remote-controlled toy.</p></div></div>
+    </div>
+
+    <!-- AI Flow Diagram -->
+    <div class="ai-diagram">
+      <div class="s-label" style="margin-bottom:22px">AI Decision Flow</div>
+      <svg viewBox="0 0 280 390" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="rgba(0,255,136,.45)"/>
+          </marker>
+        </defs>
+        <rect x="90" y="10" width="100" height="34" rx="6" fill="rgba(0,255,136,.08)" stroke="rgba(0,255,136,.28)" stroke-width="1"/>
+        <text x="140" y="31" text-anchor="middle" font-family="DM Mono" font-size="8.5" fill="#00ff88" letter-spacing="1">SENSOR INPUT</text>
+        <line x1="140" y1="44" x2="140" y2="76" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="70" y="76" width="140" height="34" rx="6" fill="rgba(0,255,136,.05)" stroke="rgba(0,255,136,.2)" stroke-width="1"/>
+        <text x="140" y="97" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#cef0dd" letter-spacing="1">ARDUINO PROCESSES</text>
+        <line x1="140" y1="110" x2="140" y2="145" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <polygon points="140,145 202,177 140,210 78,177" fill="rgba(0,255,136,.04)" stroke="rgba(0,255,136,.32)" stroke-width="1"/>
+        <text x="140" y="174" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#00ff88">OBSTACLE</text>
+        <text x="140" y="186" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#00ff88">DETECTED?</text>
+        <line x1="202" y1="177" x2="248" y2="177" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <text x="222" y="170" text-anchor="middle" font-family="DM Mono" font-size="7" fill="rgba(0,255,136,.55)">YES</text>
+        <line x1="248" y1="177" x2="248" y2="197" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="218" y="197" width="60" height="26" rx="5" fill="rgba(0,255,136,.07)" stroke="rgba(0,255,136,.2)" stroke-width="1"/>
+        <text x="248" y="214" text-anchor="middle" font-family="DM Mono" font-size="7.5" fill="#cef0dd">TURN AWAY</text>
+        <line x1="140" y1="210" x2="140" y2="252" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <text x="150" y="235" font-family="DM Mono" font-size="7" fill="rgba(0,255,136,.5)">NO</text>
+        <polygon points="140,252 202,277 140,302 78,277" fill="rgba(0,255,136,.04)" stroke="rgba(0,255,136,.22)" stroke-width="1"/>
+        <text x="140" y="274" text-anchor="middle" font-family="DM Mono" font-size="8" fill="#00ff88">ON LINE?</text>
+        <text x="140" y="286" text-anchor="middle" font-family="DM Mono" font-size="7" fill="rgba(206,240,221,.35)">(IR sensor)</text>
+        <line x1="140" y1="302" x2="140" y2="332" stroke="rgba(0,255,136,.28)" stroke-width="1" marker-end="url(#arr)"/>
+        <rect x="90" y="332" width="100" height="26" rx="5" fill="rgba(0,255,136,.07)" stroke="rgba(0,255,136,.2)" stroke-width="1"/>
+        <text x="140" y="349" text-anchor="middle" font-family="DM Mono" font-size="7.5" fill="#cef0dd">FOLLOW PATH</text>
+        <path d="M38,277 Q10,277 10,28 Q10,10 90,10" fill="none" stroke="rgba(0,255,136,.1)" stroke-width="1" stroke-dasharray="3,4"/>
+        <line x1="78" y1="277" x2="38" y2="277" stroke="rgba(0,255,136,.1)" stroke-width="1"/>
+        <text x="16" y="155" font-family="DM Mono" font-size="6" fill="rgba(0,255,136,.25)" transform="rotate(-90,16,155)">CONTINUOUS LOOP</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- IMPACT -->
+<section id="impact">
+  <div class="s-label">Real-World Impact</div>
+  <h2>Who This <em>Reaches</em></h2>
+  <p class="s-sub">FutureTech Junior is built to travel — affordable, portable, and designed for the classrooms that need it most.</p>
+  <div class="impact-grid">
+    <div class="impact-card" data-emoji="🧒">
+      <span class="impact-icon">🧒</span>
+      <div class="impact-title">Elementary Students</div>
+      <div class="impact-body">Their first real encounter with a thinking machine — concrete, hands-on, unforgettable. Seeing a robot react to them in real time sparks curiosity that no textbook can replicate.</div>
+    </div>
+    <div class="impact-card" data-emoji="👩‍🏫">
+      <span class="impact-icon">👩‍🏫</span>
+      <div class="impact-title">Teachers & STEM Educators</div>
+      <div class="impact-body">A ready-made demonstration tool for technology and science classes. No deep programming knowledge needed — place it on the floor and let the robot do the teaching.</div>
+    </div>
+    <div class="impact-card" data-emoji="🏘️">
+      <span class="impact-icon">🏘️</span>
+      <div class="impact-title">Rural & Underserved Schools</div>
+      <div class="impact-body">The entire system is affordable and fits in a backpack. It can visit schools that have never hosted a STEM workshop — bringing robotics education directly to where it's needed most.</div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <div class="s-label">The Builders</div>
+  <h2>Five Students.<br>One <em>Mission</em>.</h2>
+  <p class="s-sub">A team united by the belief that every child in Kazakhstan deserves to experience the joy of robotics.</p>
+  <div class="team-row">
+    <div class="member"><div class="member-avatar">A</div><div class="member-id">ID · 230317039</div><div class="member-role">Team Lead &<br>System Architecture</div></div>
+    <div class="member"><div class="member-avatar">B</div><div class="member-id">ID · 230317054</div><div class="member-role">Hardware &<br>Electronics</div></div>
+    <div class="member"><div class="member-avatar">C</div><div class="member-id">ID · 230317005</div><div class="member-role">Arduino<br>Programming</div></div>
+    <div class="member"><div class="member-avatar">D</div><div class="member-id">ID · 230317032</div><div class="member-role">LEGO Frame<br>Design</div></div>
+    <div class="member"><div class="member-avatar">E</div><div class="member-id">ID · 230317033</div><div class="member-role">Research &<br>Documentation</div></div>
+  </div>
+</section>
+
+<!-- CONCLUSION -->
+<section id="conclusion">
+  <div class="concl-inner">
+    <div class="s-label" style="justify-content:center">Our Belief</div>
+    <div class="big-text">
+      Touch it. See it.<br><span>Become the engineer.</span>
+    </div>
+    <p class="concl-desc">Abstract concepts become real when children can watch a robot think and react. FutureTech Junior is more than a school project — it's the beginning of a movement to bring hands-on STEM education to every corner of Kazakhstan.</p>
+    <a href="#about" class="btn-main">Explore the Project</a>
+  </div>
+</section>
+
+<footer>
+  <div class="f-logo">FutureTech Junior</div>
+  <div class="f-mid">LEGO · Arduino · AI · Kazakhstan 🇰🇿</div>
+  <div class="f-right">IEEE Competition 2025</div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════
+   THREE.JS 3D ROBOT — SLOW SMOOTH SPIN
+═══════════════════════════════════════ */
+(function(){
+  const canvas = document.getElementById('robot-canvas');
+  const cont = canvas.parentElement;
+
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  cam.position.set(0, 0.5, 5.8);
+
+  function resize(){
+    const w = cont.clientWidth, h = cont.clientHeight;
+    renderer.setSize(w, h, false);
+    cam.aspect = w/h;
+    cam.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* MATERIALS */
+  const mBody  = new THREE.MeshStandardMaterial({color:0x8ecfaa, metalness:.3, roughness:.5});
+  const mLight = new THREE.MeshStandardMaterial({color:0xd8f5e8, metalness:.15, roughness:.6});
+  const mChrom = new THREE.MeshStandardMaterial({color:0xaac4b4, metalness:.9, roughness:.15});
+  const mScr   = new THREE.MeshStandardMaterial({color:0x000d07, roughness:.05});
+  const mGreen = new THREE.MeshStandardMaterial({color:0x00ff88, emissive:0x00ff88, emissiveIntensity:1.0, roughness:.25});
+  const mYell  = new THREE.MeshStandardMaterial({color:0xf5c842, emissive:0xf5c842, emissiveIntensity:.55, roughness:.4});
+  const mDark  = new THREE.MeshStandardMaterial({color:0x061008, roughness:.8});
+
+  function box(w,h,d,mat,x=0,y=0,z=0){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; return m;
+  }
+  function cyl(rt,rb,h,s,mat,x=0,y=0,z=0){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s),mat);
+    m.position.set(x,y,z); m.castShadow=true; return m;
+  }
+  function sph(r,mat,x=0,y=0,z=0){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,20),mat);
+    m.position.set(x,y,z); m.castShadow=true; return m;
+  }
+
+  const robot = new THREE.Group();
+
+  /* ── TORSO ── */
+  const torso=new THREE.Group();
+  torso.add(box(1.45,1.25,1.0,mBody));
+  torso.add(box(0.95,0.48,0.06,mDark, 0,0.06,0.51));
+  // LED bar
+  const ledColors=[mGreen,mDark,mGreen,mDark,mGreen];
+  for(let i=0;i<5;i++) torso.add(box(.12,.065,.05,ledColors[i], -0.29+i*.145, 0.07, 0.555));
+  torso.add(box(0.72,0.052,0.05,mDark, 0,-0.12,0.555));
+  // side detail bolts
+  torso.add(sph(.055,mChrom, -0.72, 0.3, 0));
+  torso.add(sph(.055,mChrom,  0.72, 0.3, 0));
+  torso.add(sph(.055,mChrom, -0.72,-0.3, 0));
+  torso.add(sph(.055,mChrom,  0.72,-0.3, 0));
+  robot.add(torso);
+
+  /* ── NECK ── */
+  robot.add(cyl(.24,.3,.32,12,mChrom, 0,.8,0));
+
+  /* ── HEAD ── */
+  const head=new THREE.Group();
+  head.add(box(1.38,1.12,1.02,mLight, 0,0,0));
+  // face screen
+  head.add(box(1.02,.78,.055,mScr, 0,-.02,.51));
+  // screen border
+  head.add(box(1.08,.84,.04,mChrom, 0,-.02,.505));
+  // EYES
+  const eyeL=sph(.17,mGreen, -.28,.07,.565);
+  const eyeR=sph(.17,mGreen,  .28,.07,.565);
+  head.add(eyeL,eyeR);
+  // smile
+  for(let i=0;i<7;i++){
+    const t=(i/6)*Math.PI;
+    head.add(sph(.042,mGreen, Math.cos(t-.5)*.38, -.22+Math.sin(t*.9)*.09, .565));
+  }
+  // ear panels
+  head.add(box(.1,.52,.58,mChrom, -.74,0,0));
+  head.add(box(.1,.52,.58,mChrom,  .74,0,0));
+  const earDL=sph(.082,mYell, -.8,.12,.1); head.add(earDL);
+  const earDR=sph(.082,mYell,  .8,.12,.1); head.add(earDR);
+  // top yellow bar
+  head.add(box(.72,.12,.42,mYell, 0,.57,0));
+  head.position.y=1.38;
+  robot.add(head);
+
+  /* ── ANTENNA ── */
+  const antG=new THREE.Group();
+  antG.add(cyl(.036,.036,.46,8,mChrom, 0,.23,0));
+  const antB=sph(.095,mYell, 0,.48,0); antG.add(antB);
+  antG.position.y=1.95;
+  robot.add(antG);
+
+  /* ── ARMS ── */
+  function makeArm(side){
+    const g=new THREE.Group();
+    g.add(sph(.22,mChrom, 0,.28,0));   // shoulder
+    g.add(box(.38,1.02,.38,mBody, 0,-.22,0)); // upper
+    g.add(box(.3,.58,.3,mLight, 0,-.88,0));   // fore
+    g.add(sph(.22,mChrom, 0,-1.22,0));         // hand
+    for(let i=0;i<3;i++) g.add(box(.062,.2,.062,mChrom, -.062+i*.062,-1.4,0));
+    g.position.set(side*1.02,.18,0);
+    return g;
+  }
+  const armL=makeArm(-1), armR=makeArm(1);
+  robot.add(armL,armR);
+
+  /* ── LEGS ── */
+  function makeLeg(side){
+    const g=new THREE.Group();
+    g.add(box(.38,.68,.38,mBody,   0,-.32,0));
+    g.add(sph(.08,mGreen,           0,-.64,0));
+    g.add(box(.32,.56,.32,mLight,  0,-.9,0));
+    g.add(box(.52,.2,.62,mChrom,   side*.05,-1.26,.08));
+    g.position.set(side*.42,-1.02,0);
+    return g;
+  }
+  robot.add(makeLeg(-1),makeLeg(1));
+
+  /* ── PLATFORM RING ── */
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(.75,1.18,64),
+    new THREE.MeshBasicMaterial({color:0x00ff88,transparent:true,opacity:.16,side:THREE.DoubleSide})
+  );
+  ring.rotation.x=-Math.PI/2;
+  ring.position.y=-1.88;
+  scene.add(ring);
+
+  robot.position.y=0.65;
+  scene.add(robot);
+
+  /* LIGHTS */
+  scene.add(new THREE.AmbientLight(0x1a3826,1.4));
+  const key=new THREE.DirectionalLight(0xb0ffd4,2.4);
+  key.position.set(3,5,4); key.castShadow=true; scene.add(key);
+  const fill=new THREE.DirectionalLight(0x004422,1.1);
+  fill.position.set(-4,2,-3); scene.add(fill);
+  const rim=new THREE.DirectionalLight(0x00ff88,1.6);
+  rim.position.set(0,3,-5); scene.add(rim);
+
+  const ptGreen=new THREE.PointLight(0x00ff88,3,7);
+  ptGreen.position.set(0,-1.4,1.2); scene.add(ptGreen);
+  const ptEyeL=new THREE.PointLight(0x00ff88,1.3,2.5);
+  ptEyeL.position.set(-.28,2.05,1.3); scene.add(ptEyeL);
+  const ptEyeR=new THREE.PointLight(0x00ff88,1.3,2.5);
+  ptEyeR.position.set( .28,2.05,1.3); scene.add(ptEyeR);
+  const ptAnt=new THREE.PointLight(0xf5c842,1.4,2);
+  ptAnt.position.set(0,2.56,0); scene.add(ptAnt);
+
+  /* ANIMATE */
+  let t=0;
+  function animate(){
+    requestAnimationFrame(animate);
+    t += 0.004; // slow tick → ~full rotation every ~28 seconds
+
+    // ── 360° slow rotation ──
+    robot.rotation.y = t * 0.5;
+
+    // ── gentle floating bob ──
+    robot.position.y = 0.65 + Math.sin(t * 0.65) * 0.055;
+
+    // ── arms subtle sway ──
+    armL.rotation.z =  0.18 + Math.sin(t * 0.85) * 0.1;
+    armR.rotation.z = -0.18 - Math.sin(t * 0.85) * 0.1;
+
+    // ── antenna bob ──
+    antB.scale.setScalar(0.9 + Math.sin(t*3)*0.12);
+    ptAnt.intensity = 1.0 + Math.sin(t*3)*0.9;
+
+    // ── eye pulse ──
+    const ep = 0.72 + Math.sin(t*2.4)*0.28;
+    eyeL.material.emissiveIntensity = ep;
+    eyeR.material.emissiveIntensity = ep;
+    ptEyeL.intensity = ep*1.5;
+    ptEyeR.intensity = ep*1.5;
+
+    // ── ring pulse ──
+    ring.material.opacity = 0.1 + Math.sin(t*1.6)*0.07;
+    ring.scale.setScalar(1 + Math.sin(t*1.6)*0.06);
+
+    // ── green underlighting flicker ──
+    ptGreen.intensity = 2.4 + Math.sin(t*4.2)*0.7;
+
+    renderer.render(scene, cam);
+  }
+  animate();
+})();
+
+/* ═══════ CUSTOM CURSOR ═══════ */
+const cur=document.getElementById('cursor');
+const curR=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX; my=e.clientY;
+  cur.style.left=mx+'px'; cur.style.top=my+'px';
+});
+(function loop(){ rx+=(mx-rx)*.1; ry+=(my-ry)*.1;
+  curR.style.left=rx+'px'; curR.style.top=ry+'px';
+  requestAnimationFrame(loop);
+})();
+document.querySelectorAll('a,button,.comp-item,.about-cell,.impact-card,.member').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.width='20px';cur.style.height='20px';curR.style.width='52px';curR.style.height='52px';});
+  el.addEventListener('mouseleave',()=>{cur.style.width='12px';cur.style.height='12px';curR.style.width='36px';curR.style.height='36px';});
+});
+
+/* ═══════ NAV SCROLL ═══════ */
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',window.scrollY>60));
+
+/* ═══════ SCROLL REVEAL ═══════ */
+const io=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting) setTimeout(()=>e.target.classList.add('vis'),i*130);
+  });
+},{threshold:.12});
+document.querySelectorAll('.how-step').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
